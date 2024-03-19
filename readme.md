@@ -29,6 +29,30 @@ https://neo4j.com/download/
 Then script can be launched with the following command:  
 
 ```bash
+python3 OpenShiftGrapher.py -h
+usage: OpenShiftGrapher.py [-h] [-r] -a APIURL -t TOKEN [-c COLLECTOR [COLLECTOR ...]] [-u USERNEO4J] [-p PASSWORDNEO4J]
+
+Exemple:
+    python3 GenClusterGraph.py -a "https://api.cluster.net:6443" -t "eyJhbGciOi..."
+    python3 GenClusterGraph.py -a "https://api.cluster.net:6443" -t $(cat token.txt)
+    python3 GenClusterGraph.py -a "https://api.cluster.net:6443" -t $(cat token.txt) -c scc role route
+
+options:
+  -h, --help            show this help message and exit
+  -r, --resetDB         reset the neo4j db.
+  -a APIURL, --apiUrl APIURL
+                        api url.
+  -t TOKEN, --token TOKEN
+                        service account token.
+  -c COLLECTOR [COLLECTOR ...], --collector COLLECTOR [COLLECTOR ...]
+                        list of collectors. Possible values: all, project, scc, sa, role, clusterrole, route, pod 
+  -u USERNEO4J, --userNeo4j USERNEO4J
+                        neo4j database user.
+  -p PASSWORDNEO4J, --passwordNeo4j PASSWORDNEO4J
+                        neo4j database password.
+```
+
+```bash
 python3 OpenShiftGrapher.py -a "https://api.cluster.net:6443" -t $(cat quota.token) -c all
 ```
 
@@ -110,7 +134,25 @@ MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[r2:`HAS
 ## EnumAbsentObject
 
 For EnumAbsentObject.py their is no need to install the neo4j database and it can be used with the following dependency:  
+```
 pip install openshift  
+```
+
+```bash
+python3 EnumAbsentObject.py -h
+usage: EnumAbsentObject.py [-h] -a APIURL -t TOKEN
+
+Exemple:
+    python3 AbsentEnum.py -a "https://api.cluster.net:6443" -t "eyJhbGciOi..."
+    python3 AbsentEnum.py -a "https://api.cluster.net:6443" -t $(cat token.txt)
+
+options:
+  -h, --help            show this help message and exit
+  -a APIURL, --apiUrl APIURL
+                        api url.
+  -t TOKEN, --token TOKEN
+                        service account token.
+```
 
 ```bash
 python3 EnumAbsentObject.py -a "https://api.cluster.net:6443" -t $(cat quota.token)
