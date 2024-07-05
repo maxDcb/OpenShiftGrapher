@@ -158,9 +158,10 @@ if "all" in collector or "scc" in collector:
                     subjectNode.__primarylabel__ = "ServiceAccount"
                     subjectNode.__primarykey__ = "uid"
                 except: 
-                    subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace)
+                    uid = subjectName+"_"+subjectNamespace
+                    subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
                     subjectNode.__primarylabel__ = "AbsentServiceAccount"
-                    subjectNode.__primarykey__ = "name"  
+                    subjectNode.__primarykey__ = "uid"  
                     # print("!!!! serviceAccount related to SSC: ", enum.metadata.name ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')    
 
                 try:
@@ -170,9 +171,10 @@ if "all" in collector or "scc" in collector:
                     projectNode.__primarykey__ = "uid"
 
                 except: 
-                    projectNode = Node("AbsentProject",name=subjectNamespace)
+                    uid = subjectNamespace
+                    projectNode = Node("AbsentProject",name=subjectNamespace, uid=uid)
                     projectNode.__primarylabel__ = "AbsentProject"
-                    projectNode.__primarykey__ = "name"      
+                    projectNode.__primarykey__ = "uid"      
 
                 tx = graph.begin()
                 a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
@@ -196,78 +198,15 @@ roles = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kin
 role_list = roles.get()
  
 if "all" in collector or "role" in collector:
-    for enum in role_list.items:
-        # print(enum.metadata)
+    for role in role_list.items:
+        # print(role.metadata)
+
+        roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
+        roleNode.__primarylabel__ = "Role"
+        roleNode.__primarykey__ = "uid"
         tx = graph.begin()
-        a = Node("Role",name=enum.metadata.name, namespace=enum.metadata.namespace, uid=enum.metadata.uid)
-        a.__primarylabel__ = "Role"
-        a.__primarykey__ = "uid"
-        node = tx.merge(a) 
+        node = tx.merge(roleNode) 
         graph.commit(tx)
-
-
-##
-## ClusterRole
-## 
-print("#### ClusterRole ####")
-
-clusterroles = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='ClusterRole')
-clusterrole_list = clusterroles.get()
- 
-if "all" in collector or "clusterrole" in collector:
-    for enum in clusterrole_list.items:
-        # print(enum.metadata)
-        tx = graph.begin()
-        a = Node("ClusterRole",name=enum.metadata.name, uid=enum.metadata.uid)
-        a.__primarylabel__ = "ClusterRole"
-        a.__primarykey__ = "uid"
-        node = tx.merge(a) 
-        graph.commit(tx)
-
-
-##
-## RoleBinding
-## 
-print("#### RoleBinding ####")
-
-roleBindings = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='RoleBinding')
-roleBinding_list = roleBindings.get()
-
-if "all" in collector or "role" in collector:
-    for enum in roleBinding_list.items:
-        # print(enum)
-        description = enum.description
-        if description:
-            ok=1
-        else:
-            description = ""
-
-        roleKind = enum.roleRef.kind
-        roleName = enum.roleRef.name
-
-        if roleKind == "ClusterRole":
-            try:
-                role = clusterroles.get(name=roleName)
-            except: 
-                # print(enum)
-                # exit()
-                continue
-
-            roleNode = Node("ClusterRole",name=role.metadata.name, uid=role.metadata.uid)
-            roleNode.__primarylabel__ = "ClusterRole"
-            roleNode.__primarykey__ = "uid"
-
-        elif roleKind == "Role":
-            try:
-                role = roles.get(name=roleName, namespace=enum.metadata.namespace)
-            except: 
-                # print(enum)
-                # exit()
-                continue
-
-            roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
-            roleNode.__primarylabel__ = "Role"
-            roleNode.__primarykey__ = "uid"
 
         if role.rules:
             for rule in role.rules:
@@ -283,9 +222,10 @@ if "all" in collector or "role" in collector:
                                     resourceName = ":"
                                     resourceName = resource
 
-                                ressourceNode = Node("Resource", name=resourceName)
+                                uid=role.metadata.namespace+"_"+resourceName
+                                ressourceNode = Node("Resource", name=resourceName, uid=uid)
                                 ressourceNode.__primarylabel__ = "Resource"
-                                ressourceNode.__primarykey__ = "name"
+                                ressourceNode.__primarykey__ = "uid"
 
                                 tx = graph.begin()
                                 if verb == "impersonate":
@@ -301,9 +241,10 @@ if "all" in collector or "role" in collector:
                     for nonResourceURL in rule.nonResourceURLs: 
                         for verb in rule.verbs:
 
-                            ressourceNode = Node("ResourceNoUrl", name=nonResourceURL)
+                            uid=role.metadata.namespace+"_"+nonResourceURL
+                            ressourceNode = Node("ResourceNoUrl", name=nonResourceURL, uid=uid)
                             ressourceNode.__primarylabel__ = "ResourceNoUrl"
-                            ressourceNode.__primarykey__ = "name"
+                            ressourceNode.__primarykey__ = "uid"
 
                             tx = graph.begin()
                             r1 = Relationship(roleNode, verb, ressourceNode)
@@ -312,11 +253,129 @@ if "all" in collector or "role" in collector:
                             node = tx.merge(r1) 
                             graph.commit(tx)
 
+
+##
+## ClusterRole
+## 
+print("#### ClusterRole ####")
+
+clusterroles = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='ClusterRole')
+clusterrole_list = clusterroles.get()
+ 
+if "all" in collector or "clusterrole" in collector:
+    for role in clusterrole_list.items:
+        # print(role.metadata)
+
+        tx = graph.begin()
+        roleNode = Node("ClusterRole", name=role.metadata.name, uid=role.metadata.uid)
+        roleNode.__primarylabel__ = "ClusterRole"
+        roleNode.__primarykey__ = "uid"
+        node = tx.merge(roleNode) 
+        graph.commit(tx)
+
+        if role.rules:
+            for rule in role.rules:
+                if rule.apiGroups:
+                    for apiGroup in rule.apiGroups:
+                        for resource in rule.resources:
+                            for verb in rule.verbs:
+
+                                if apiGroup == "":
+                                    resourceName = resource
+                                else:
+                                    resourceName = apiGroup
+                                    resourceName = ":"
+                                    resourceName = resource
+
+                                uid="cluster"+"_"+resourceName
+                                ressourceNode = Node("Resource", name=resourceName, uid=uid)
+                                ressourceNode.__primarylabel__ = "Resource"
+                                ressourceNode.__primarykey__ = "uid"
+
+                                tx = graph.begin()
+                                if verb == "impersonate":
+                                    r1 = Relationship(roleNode, "impers", ressourceNode)  
+                                else:
+                                    r1 = Relationship(roleNode, verb, ressourceNode)
+                                node = tx.merge(roleNode) 
+                                node = tx.merge(ressourceNode) 
+                                node = tx.merge(r1) 
+                                graph.commit(tx)
+
+                if rule.nonResourceURLs: 
+                    for nonResourceURL in rule.nonResourceURLs: 
+                        for verb in rule.verbs:
+
+                            uid="cluster"+"_"+nonResourceURL
+                            ressourceNode = Node("ResourceNoUrl", name=nonResourceURL, uid=uid)
+                            ressourceNode.__primarylabel__ = "ResourceNoUrl"
+                            ressourceNode.__primarykey__ = "uid"
+
+                            tx = graph.begin()
+                            r1 = Relationship(roleNode, verb, ressourceNode)
+                            node = tx.merge(roleNode) 
+                            node = tx.merge(ressourceNode) 
+                            node = tx.merge(r1) 
+                            graph.commit(tx)
+
+
+##
+## RoleBinding
+## 
+print("#### RoleBinding ####")
+
+roleBindings = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='RoleBinding')
+roleBinding_list = roleBindings.get()
+
+if "all" in collector or "role" in collector:
+    for enum in roleBinding_list.items:
+        # print(enum)
+        name = enum.metadata.name
+        uid = enum.metadata.uid
+        namespace = enum.metadata.namespace
+        description = enum.metadata.description
+
+        rolebindingNode = Node("RoleBinding", name=name, namespace=namespace, uid=uid)
+        rolebindingNode.__primarylabel__ = "RoleBinding"
+        rolebindingNode.__primarykey__ = "uid"
+
+        roleKind = enum.roleRef.kind
+        roleName = enum.roleRef.name
+
+        if roleKind == "ClusterRole":
+            try:
+                role = clusterroles.get(name=roleName)
+                roleNode = Node("ClusterRole",name=role.metadata.name, uid=role.metadata.uid)
+                roleNode.__primarylabel__ = "ClusterRole"
+                roleNode.__primarykey__ = "uid"
+
+            except: 
+                uid = role.metadata.name
+                roleNode = Node("AbsentClusterRole", name=role.metadata.name, uid=uid)
+                roleNode.__primarylabel__ = "AbsentClusterRole"
+                roleNode.__primarykey__ = "uid"
+
+        elif roleKind == "Role":
+            try:
+                role = roles.get(name=roleName, namespace=enum.metadata.namespace)
+                roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
+                roleNode.__primarylabel__ = "Role"
+                roleNode.__primarykey__ = "uid"
+
+            except: 
+                uid=role.metadata.name+"_"+role.metadata.namespace
+                roleNode = Node("AbsentRole",name=role.metadata.name, namespace=role.metadata.namespace, uid=uid)
+                roleNode.__primarylabel__ = "AbsentRole"
+                roleNode.__primarykey__ = "uid"
+
         if enum.subjects:
             for subject in enum.subjects:
                 subjectKind = subject.kind
                 subjectName = subject.name
                 subjectNamespace = subject.namespace
+
+                if not subjectNamespace:
+                    subjectNamespace = namespace
 
                 if subjectKind == "ServiceAccount": 
                     if subjectNamespace:
@@ -327,9 +386,10 @@ if "all" in collector or "role" in collector:
                             projectNode.__primarykey__ = "uid"
 
                         except: 
-                            projectNode = Node("AbsentProject",name=subjectNamespace)
+                            uid = subjectNamespace
+                            projectNode = Node("AbsentProject", name=subjectNamespace, uid=uid)
                             projectNode.__primarylabel__ = "AbsentProject"
-                            projectNode.__primarykey__ = "name"
+                            projectNode.__primarykey__ = "uid"
 
                         try:
                             serviceAccount = serviceAccounts.get(name=subjectName, namespace=subjectNamespace)
@@ -338,18 +398,26 @@ if "all" in collector or "role" in collector:
                             subjectNode.__primarykey__ = "uid"
 
                         except: 
-                            subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace)
+                            uid = subjectName+"_"+subjectNamespace
+                            subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
                             subjectNode.__primarylabel__ = "AbsentServiceAccount"
-                            subjectNode.__primarykey__ = "name"
+                            subjectNode.__primarykey__ = "uid"
                             # print("!!!! serviceAccount related to Role: ", roleName ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')
 
                         tx = graph.begin()
                         r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-                        r2 = Relationship(subjectNode, "HAS ROLE", roleNode, description=description)
-                        node = tx.merge(roleNode) 
+                        r2 = Relationship(subjectNode, "HAS ROLEBINDING", rolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(projectNode) 
                         node = tx.merge(subjectNode) 
+                        node = tx.merge(rolebindingNode) 
+                        node = tx.merge(roleNode) 
                         node = tx.merge(r1) 
                         node = tx.merge(r2) 
+                        node = tx.merge(r3) 
                         graph.commit(tx)
                                 
 
@@ -364,11 +432,14 @@ clusterRoleBinding_list = clusterRoleBindings.get()
 if "all" in collector or "clusterrole" in collector:
     for enum in clusterRoleBinding_list.items:
         # print(enum)
-        description = enum.description
-        if description:
-            ok=1
-        else:
-            description = ""
+        name = enum.metadata.name
+        uid = enum.metadata.uid
+        namespace = enum.metadata.namespace
+        description = enum.metadata.description
+
+        clusterRolebindingNode = Node("ClusterRoleBinding", name=name, namespace=namespace, uid=uid)
+        clusterRolebindingNode.__primarylabel__ = "RoleBinding"
+        clusterRolebindingNode.__primarykey__ = "uid"
 
         roleKind = enum.roleRef.kind
         roleName = enum.roleRef.name
@@ -376,69 +447,28 @@ if "all" in collector or "clusterrole" in collector:
         if roleKind == "ClusterRole":
             try:
                 role = clusterroles.get(name=roleName)
-            except: 
-                # print(enum)
-                # exit()
-                continue
+                roleNode = Node("ClusterRole",name=role.metadata.name, uid=role.metadata.uid)
+                roleNode.__primarylabel__ = "ClusterRole"
+                roleNode.__primarykey__ = "uid"
 
-            roleNode = Node("ClusterRole",name=role.metadata.name, uid=role.metadata.uid)
-            roleNode.__primarylabel__ = "ClusterRole"
-            roleNode.__primarykey__ = "uid"
+            except: 
+                uid = role.metadata.name
+                roleNode = Node("AbsentClusterRole",name=role.metadata.name, uid=uid)
+                roleNode.__primarylabel__ = "AbsentClusterRole"
+                roleNode.__primarykey__ = "uid"
 
         elif roleKind == "Role":
             try:
                 role = roles.get(name=roleName, namespace=enum.metadata.namespace)
+                roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
+                roleNode.__primarylabel__ = "Role"
+                roleNode.__primarykey__ = "uid"
+
             except: 
-                # print(enum)
-                # exit()
-                continue
-
-            roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
-            roleNode.__primarylabel__ = "Role"
-            roleNode.__primarykey__ = "uid"
-
-        if role.rules:
-            for rule in role.rules:
-                if rule.apiGroups:
-                    for apiGroup in rule.apiGroups:
-                        for resource in rule.resources:
-                            for verb in rule.verbs:
-
-                                if apiGroup == "":
-                                    resourceName = resource
-                                else:
-                                    resourceName = apiGroup
-                                    resourceName = ":"
-                                    resourceName = resource
-
-                                ressourceNode = Node("Resource", name=resourceName)
-                                ressourceNode.__primarylabel__ = "Resource"
-                                ressourceNode.__primarykey__ = "name"
-                                
-                                tx = graph.begin()
-                                if verb == "impersonate":
-                                    r1 = Relationship(roleNode, "impers", ressourceNode)  
-                                else:
-                                    r1 = Relationship(roleNode, verb, ressourceNode)
-                                node = tx.merge(roleNode) 
-                                node = tx.merge(ressourceNode) 
-                                node = tx.merge(r1) 
-                                graph.commit(tx)
-
-                if rule.nonResourceURLs: 
-                    for nonResourceURL in rule.nonResourceURLs: 
-                        for verb in rule.verbs:
-
-                            ressourceNode = Node("ResourceNoUrl", name=nonResourceURL)
-                            ressourceNode.__primarylabel__ = "ResourceNoUrl"
-                            ressourceNode.__primarykey__ = "name"
-
-                            tx = graph.begin()
-                            r1 = Relationship(roleNode, verb, ressourceNode)
-                            node = tx.merge(roleNode) 
-                            node = tx.merge(ressourceNode) 
-                            node = tx.merge(r1) 
-                            graph.commit(tx)
+                uid=role.metadata.name+"_"+role.metadata.namespace
+                roleNode = Node("AbsentRole",name=role.metadata.name, namespace=role.metadata.namespace, uid=uid)
+                roleNode.__primarylabel__ = "AbsentRole"
+                roleNode.__primarykey__ = "uid"
 
         if enum.subjects:
             for subject in enum.subjects:
@@ -455,9 +485,10 @@ if "all" in collector or "clusterrole" in collector:
                             projectNode.__primarykey__ = "uid"
 
                         except: 
-                            projectNode = Node("AbsentProject",name=subjectNamespace)
+                            uid = subjectNamespace
+                            projectNode = Node("AbsentProject", name=subjectNamespace, uid=uid)
                             projectNode.__primarylabel__ = "AbsentProject"
-                            projectNode.__primarykey__ = "name"
+                            projectNode.__primarykey__ = "uid"
 
                         try:
                             serviceAccount = serviceAccounts.get(name=subjectName, namespace=subjectNamespace)
@@ -466,18 +497,26 @@ if "all" in collector or "clusterrole" in collector:
                             subjectNode.__primarykey__ = "uid"
 
                         except: 
-                            subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace)
+                            uid = subjectName+"_"+subjectNamespace
+                            subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
                             subjectNode.__primarylabel__ = "AbsentServiceAccount"
-                            subjectNode.__primarykey__ = "name"
-                            # print("!!!! serviceAccount related to ClusterRole: ", roleName ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')
+                            subjectNode.__primarykey__ = "uid"
+                            # print("!!!! serviceAccount related to Role: ", roleName ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')
 
                         tx = graph.begin()
                         r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-                        r2 = Relationship(subjectNode, "HAS CLUSTER ROLE", roleNode, description=description)
-                        node = tx.merge(roleNode) 
+                        r2 = Relationship(subjectNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(projectNode) 
                         node = tx.merge(subjectNode) 
+                        node = tx.merge(clusterRolebindingNode) 
+                        node = tx.merge(roleNode) 
                         node = tx.merge(r1) 
                         node = tx.merge(r2) 
+                        node = tx.merge(r3) 
                         graph.commit(tx)
 
 
@@ -509,9 +548,10 @@ if "all" in collector or "route" in collector:
             projectNode.__primarykey__ = "uid"
 
         except: 
-            projectNode = Node("AbsentProject",name=namespace)
+            uid = namespace
+            projectNode = Node("AbsentProject",name=namespace, uid=uid)
             projectNode.__primarylabel__ = "AbsentProject"
-            projectNode.__primarykey__ = "name"
+            projectNode.__primarykey__ = "uid"
 
         routeNode = Node("Route",name=name, namespace=namespace, uid=uid, host=host, port=port, path=path)
         routeNode.__primarylabel__ = "Route"
