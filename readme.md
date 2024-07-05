@@ -10,6 +10,7 @@ The script is mean to create relational databases, in neo4j, of an OpenShift clu
 It extracts objects as and relationships for common information like projects, service accounts, scc and others.  
 The query system can then be used to spot inconsistency in the database, that could lead to vulnerabilities.
 
+![alt text](https://github.com/maxDcb/OpenShiftGrapher/blob/master/media/general.png?raw=true)
 
 ### Installation
 
