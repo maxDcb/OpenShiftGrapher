@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description=f"""Exemple:
 parser.add_argument('-r', '--resetDB', action="store_true", help='reset the neo4j db.')
 parser.add_argument('-a', '--apiUrl', required=True, help='api url.')
 parser.add_argument('-t', '--token', required=True, help='service account token.')
-parser.add_argument('-c', '--collector', nargs="+", default=[], help='list of collectors. Possible values: all, project, scc, sa, role, clusterrole, route, pod ')
+parser.add_argument('-c', '--collector', nargs="+", default=[], help='list of collectors. Possible values: all, project, scc, sa, role, clusterrole, rolebinding, clusterrolebinding, route, pod ')
 parser.add_argument('-u', '--userNeo4j', default="neo4j", help='neo4j database user.')
 parser.add_argument('-p', '--passwordNeo4j', default="rootroot", help='neo4j database password.')
 
@@ -327,7 +327,7 @@ print("#### RoleBinding ####")
 roleBindings = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='RoleBinding')
 roleBinding_list = roleBindings.get()
 
-if "all" in collector or "role" in collector:
+if "all" in collector or "rolebinding" in collector:
     for enum in roleBinding_list.items:
         # print(enum)
         name = enum.metadata.name
@@ -350,8 +350,8 @@ if "all" in collector or "role" in collector:
                 roleNode.__primarykey__ = "uid"
 
             except: 
-                uid = role.metadata.name
-                roleNode = Node("AbsentClusterRole", name=role.metadata.name, uid=uid)
+                uid = roleName
+                roleNode = Node("AbsentClusterRole", name=roleName, uid=uid)
                 roleNode.__primarylabel__ = "AbsentClusterRole"
                 roleNode.__primarykey__ = "uid"
 
@@ -363,8 +363,8 @@ if "all" in collector or "role" in collector:
                 roleNode.__primarykey__ = "uid"
 
             except: 
-                uid=role.metadata.name+"_"+role.metadata.namespace
-                roleNode = Node("AbsentRole",name=role.metadata.name, namespace=role.metadata.namespace, uid=uid)
+                uid = roleName + "_" + namespace
+                roleNode = Node("AbsentRole",name=roleName, namespace=namespace, uid=uid)
                 roleNode.__primarylabel__ = "AbsentRole"
                 roleNode.__primarykey__ = "uid"
 
@@ -429,7 +429,7 @@ print("#### ClusterRoleBinding ####")
 clusterRoleBindings = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v1', kind='ClusterRoleBinding')
 clusterRoleBinding_list = clusterRoleBindings.get()
  
-if "all" in collector or "clusterrole" in collector:
+if "all" in collector or "clusterrolebinding" in collector:
     for enum in clusterRoleBinding_list.items:
         # print(enum)
         name = enum.metadata.name
@@ -452,8 +452,8 @@ if "all" in collector or "clusterrole" in collector:
                 roleNode.__primarykey__ = "uid"
 
             except: 
-                uid = role.metadata.name
-                roleNode = Node("AbsentClusterRole",name=role.metadata.name, uid=uid)
+                uid = roleName
+                roleNode = Node("AbsentClusterRole",name=roleName, uid=uid)
                 roleNode.__primarylabel__ = "AbsentClusterRole"
                 roleNode.__primarykey__ = "uid"
 
@@ -465,8 +465,8 @@ if "all" in collector or "clusterrole" in collector:
                 roleNode.__primarykey__ = "uid"
 
             except: 
-                uid=role.metadata.name+"_"+role.metadata.namespace
-                roleNode = Node("AbsentRole",name=role.metadata.name, namespace=role.metadata.namespace, uid=uid)
+                uid=roleName+"_"+namespace
+                roleNode = Node("AbsentRole",name=roleName, namespace=namespace, uid=uid)
                 roleNode.__primarylabel__ = "AbsentRole"
                 roleNode.__primarykey__ = "uid"
 
@@ -566,65 +566,43 @@ if "all" in collector or "route" in collector:
 
 
 ##
-## DEV
-##
-
-
-##
-## Enum all
-##
-# print("#### All ####")
-
-# allRessources = dyn_client.resources.get()
-# allRessource_list = allRessources.get()
-# for enum in allRessource_list.items:
-#     print(enum)
-
-
-
-##
 ## Pod
 ## 
-# print("#### Pod ####")
+print("#### Pod ####")
 
-# pods = dyn_client.resources.get(api_version='v1', kind='Pod')
-# pod_list = pods.get()
+pods = dyn_client.resources.get(api_version='v1', kind='Pod')
+pod_list = pods.get()
 
 # if "all" in collector or "pod" in collector:
-#     for enum in pod_list.items:
-#         print(enum.metadata)
+if "pod" in collector:
+    for enum in pod_list.items:
+        print(enum.metadata)
 
-        # name = enum.metadata.name
-        # namespace = enum.metadata.namespace
-        # uid = enum.metadata.uid
+        name = enum.metadata.name
+        namespace = enum.metadata.namespace
+        uid = enum.metadata.uid
 
-        # host = enum.spec.host
-        # path = enum.spec.path
-        # port= "any"
-        # if enum.spec.port:
-        #     port = enum.spec.port.targetPort    
+        try:
+            project_list = projects.get(name=namespace)
+            projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+            projectNode.__primarylabel__ = "Project"
+            projectNode.__primarykey__ = "uid"
 
-        # try:
-        #     project_list = projects.get(name=namespace)
-        #     projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
-        #     projectNode.__primarylabel__ = "Project"
-        #     projectNode.__primarykey__ = "uid"
+        except: 
+            projectNode = Node("AbsentProject",name=namespace)
+            projectNode.__primarylabel__ = "AbsentProject"
+            projectNode.__primarykey__ = "name"
 
-        # except: 
-        #     projectNode = Node("AbsentProject",name=namespace)
-        #     projectNode.__primarylabel__ = "AbsentProject"
-        #     projectNode.__primarykey__ = "name"
+        podNode = Node("Pod",name=name, namespace=namespace, uid=uid)
+        podNode.__primarylabel__ = "Pod"
+        podNode.__primarykey__ = "uid"
 
-        # routeNode = Node("Route",name=name, namespace=namespace, uid=uid, host=host, port=port, path=path)
-        # routeNode.__primarylabel__ = "Route"
-        # routeNode.__primarykey__ = "uid"
-
-        # tx = graph.begin()
-        # relationShip = Relationship(projectNode, "CONTAIN ROUTE", routeNode)
-        # node = tx.merge(projectNode) 
-        # node = tx.merge(routeNode) 
-        # node = tx.merge(relationShip) 
-        # graph.commit(tx)
+        tx = graph.begin()
+        relationShip = Relationship(projectNode, "CONTAIN POD", podNode)
+        node = tx.merge(projectNode) 
+        node = tx.merge(podNode) 
+        node = tx.merge(relationShip) 
+        graph.commit(tx)
 
 
 ##
