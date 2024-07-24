@@ -103,16 +103,23 @@ if "all" in collector or "sa" in collector:
         a.__primarylabel__ = "ServiceAccount"
         a.__primarykey__ = "uid"
 
-        project_list = projects.get(name=enum.metadata.namespace)
+        try:
+            project_list = projects.get(name=enum.metadata.namespace)
+            projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+            projectNode.__primarylabel__ = "Project"
+            projectNode.__primarykey__ = "uid"
 
-        b = Node("Project", name=enum.metadata.namespace, uid=project_list.metadata.uid)
-        b.__primarylabel__ = "Project"
-        b.__primarykey__ = "uid"
+        except: 
+            uid = enum.metadata.namespace
+            projectNode = Node("AbsentProject", name=enum.metadata.namespace, uid=uid)
+            projectNode.__primarylabel__ = "AbsentProject"
+            projectNode.__primarykey__ = "uid"
 
-        r2 = Relationship(b, "CONTAIN SA", a)
+
+        r2 = Relationship(projectNode, "CONTAIN SA", a)
 
         node = tx.merge(a) 
-        node = tx.merge(b) 
+        node = tx.merge(projectNode) 
         node = tx.merge(r2) 
         graph.commit(tx)
 
@@ -127,7 +134,7 @@ SSC_list = SSCs.get()
  
 if "all" in collector or "scc" in collector:
     for enum in SSC_list.items:
-        # print(enum.metadata)
+        
         tx = graph.begin()
         a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
         a.__primarylabel__ = "SCC"
@@ -136,57 +143,57 @@ if "all" in collector or "scc" in collector:
         graph.commit(tx)
 
 
-##
-## SSC Binding
-## 
-print("#### SSC Binding ####")
+# ##
+# ## SSC Binding
+# ## 
+# print("#### SSC Binding ####")
 
-if "all" in collector or "scc" in collector:
-    for enum in SSC_list.items:
-        # print(enum.metadata)
-        process = subprocess.run(["oc", "--token={}".format(api_key), "adm", "policy", "who-can", "use", "scc", enum.metadata.name, "-A"], check=True, stdout=subprocess.PIPE, universal_newlines=True)
-        info = process.stdout
-        for line in info.split('\n'):
-            if "system:serviceaccount:" in line:
-                test = line.split(":")
-                subjectNamespace = test[2]
-                subjectName = test[3]
+# if "all" in collector or "scc" in collector:
+#     for enum in SSC_list.items:
+#         # print(enum.metadata)
+#         process = subprocess.run(["oc", "--token={}".format(api_key), "adm", "policy", "who-can", "use", "scc", enum.metadata.name, "-A"], check=True, stdout=subprocess.PIPE, universal_newlines=True)
+#         info = process.stdout
+#         for line in info.split('\n'):
+#             if "system:serviceaccount:" in line:
+#                 test = line.split(":")
+#                 subjectNamespace = test[2]
+#                 subjectName = test[3]
 
-                try:
-                    serviceAccount = serviceAccounts.get(name=subjectName, namespace=subjectNamespace)
-                    subjectNode = Node("ServiceAccount",name=serviceAccount.metadata.name, namespace=serviceAccount.metadata.namespace, uid=serviceAccount.metadata.uid)
-                    subjectNode.__primarylabel__ = "ServiceAccount"
-                    subjectNode.__primarykey__ = "uid"
-                except: 
-                    uid = subjectName+"_"+subjectNamespace
-                    subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
-                    subjectNode.__primarylabel__ = "AbsentServiceAccount"
-                    subjectNode.__primarykey__ = "uid"  
-                    # print("!!!! serviceAccount related to SSC: ", enum.metadata.name ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')    
+#                 try:
+#                     serviceAccount = serviceAccounts.get(name=subjectName, namespace=subjectNamespace)
+#                     subjectNode = Node("ServiceAccount",name=serviceAccount.metadata.name, namespace=serviceAccount.metadata.namespace, uid=serviceAccount.metadata.uid)
+#                     subjectNode.__primarylabel__ = "ServiceAccount"
+#                     subjectNode.__primarykey__ = "uid"
+#                 except: 
+#                     uid = subjectName+"_"+subjectNamespace
+#                     subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
+#                     subjectNode.__primarylabel__ = "AbsentServiceAccount"
+#                     subjectNode.__primarykey__ = "uid"  
+#                     # print("!!!! serviceAccount related to SSC: ", enum.metadata.name ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')    
 
-                try:
-                    project_list = projects.get(name=subjectNamespace)
-                    projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
-                    projectNode.__primarylabel__ = "Project"
-                    projectNode.__primarykey__ = "uid"
+#                 try:
+#                     project_list = projects.get(name=subjectNamespace)
+#                     projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+#                     projectNode.__primarylabel__ = "Project"
+#                     projectNode.__primarykey__ = "uid"
 
-                except: 
-                    uid = subjectNamespace
-                    projectNode = Node("AbsentProject",name=subjectNamespace, uid=uid)
-                    projectNode.__primarylabel__ = "AbsentProject"
-                    projectNode.__primarykey__ = "uid"      
+#                 except: 
+#                     uid = subjectNamespace
+#                     projectNode = Node("AbsentProject",name=subjectNamespace, uid=uid)
+#                     projectNode.__primarylabel__ = "AbsentProject"
+#                     projectNode.__primarykey__ = "uid"      
 
-                tx = graph.begin()
-                a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
-                a.__primarylabel__ = "SCC"
-                a.__primarykey__ = "uid"
-                r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-                r2 = Relationship(subjectNode, "CAN USE SCC", a)
-                node = tx.merge(projectNode) 
-                node = tx.merge(subjectNode) 
-                node = tx.merge(a) 
-                node = tx.merge(r2) 
-                graph.commit(tx)
+#                 tx = graph.begin()
+#                 a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
+#                 a.__primarylabel__ = "SCC"
+#                 a.__primarykey__ = "uid"
+#                 r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
+#                 r2 = Relationship(subjectNode, "CAN USE SCC", a)
+#                 node = tx.merge(projectNode) 
+#                 node = tx.merge(subjectNode) 
+#                 node = tx.merge(a) 
+#                 node = tx.merge(r2) 
+#                 graph.commit(tx)
 
 
 ##
@@ -213,35 +220,58 @@ if "all" in collector or "role" in collector:
                 if rule.apiGroups:
                     for apiGroup in rule.apiGroups:
                         for resource in rule.resources:
-                            for verb in rule.verbs:
+                            if resource == "securitycontextconstraints":
+                                if rule.resourceNames:
+                                    for resourceName in rule.resourceNames:
 
-                                if apiGroup == "":
-                                    resourceName = resource
-                                else:
-                                    resourceName = apiGroup
-                                    resourceName = ":"
-                                    resourceName = resource
+                                        try:
+                                            SSC_list = SSCs.get(name=resourceName)
+                                            sscNode = Node("SCC", name=SSC_list.metadata.name, uid=SSC_list.metadata.uid)
+                                            sscNode.__primarylabel__ = "SCC"
+                                            sscNode.__primarykey__ = "uid"
+                                        except: 
+                                            uid = "SCC_"+resourceName
+                                            sscNode = Node("AbsentSCC", name=resourceName, uid=uid)
+                                            sscNode.__primarylabel__ = "AbsentSCC"
+                                            sscNode.__primarykey__ = "uid"
 
-                                uid=role.metadata.namespace+"_"+resourceName
-                                ressourceNode = Node("Resource", name=resourceName, uid=uid)
-                                ressourceNode.__primarylabel__ = "Resource"
-                                ressourceNode.__primarykey__ = "uid"
+                                        tx = graph.begin()
+                                        r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
+                                        node = tx.merge(roleNode) 
+                                        node = tx.merge(sscNode) 
+                                        node = tx.merge(r1) 
+                                        graph.commit(tx)
 
-                                tx = graph.begin()
-                                if verb == "impersonate":
-                                    r1 = Relationship(roleNode, "impers", ressourceNode)  
-                                else:
-                                    r1 = Relationship(roleNode, verb, ressourceNode)
-                                node = tx.merge(roleNode) 
-                                node = tx.merge(ressourceNode) 
-                                node = tx.merge(r1) 
-                                graph.commit(tx)
+                            else:
+                                for verb in rule.verbs:
+
+                                    if apiGroup == "":
+                                        resourceName = resource
+                                    else:
+                                        resourceName = apiGroup
+                                        resourceName = ":"
+                                        resourceName = resource
+
+                                    uid="Resource_"+role.metadata.namespace+"_"+resourceName
+                                    ressourceNode = Node("Resource", name=resourceName, uid=uid)
+                                    ressourceNode.__primarylabel__ = "Resource"
+                                    ressourceNode.__primarykey__ = "uid"
+
+                                    tx = graph.begin()
+                                    if verb == "impersonate":
+                                        r1 = Relationship(roleNode, "impers", ressourceNode)  
+                                    else:
+                                        r1 = Relationship(roleNode, verb, ressourceNode)
+                                    node = tx.merge(roleNode) 
+                                    node = tx.merge(ressourceNode) 
+                                    node = tx.merge(r1) 
+                                    graph.commit(tx)
 
                 if rule.nonResourceURLs: 
                     for nonResourceURL in rule.nonResourceURLs: 
                         for verb in rule.verbs:
 
-                            uid=role.metadata.namespace+"_"+nonResourceURL
+                            uid="ResourceNoUrl_"+role.metadata.namespace+"_"+nonResourceURL
                             ressourceNode = Node("ResourceNoUrl", name=nonResourceURL, uid=uid)
                             ressourceNode.__primarylabel__ = "ResourceNoUrl"
                             ressourceNode.__primarykey__ = "uid"
@@ -263,8 +293,11 @@ clusterroles = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v
 clusterrole_list = clusterroles.get()
  
 if "all" in collector or "clusterrole" in collector:
+    nbObject = len(clusterrole_list.items)
+    progress = 0.0
     for role in clusterrole_list.items:
-        # print(role.metadata)
+        progress=progress+1
+        print("ClusterRole progress = {}%".format(progress/nbObject*100.0))
 
         tx = graph.begin()
         roleNode = Node("ClusterRole", name=role.metadata.name, uid=role.metadata.uid)
@@ -278,35 +311,58 @@ if "all" in collector or "clusterrole" in collector:
                 if rule.apiGroups:
                     for apiGroup in rule.apiGroups:
                         for resource in rule.resources:
-                            for verb in rule.verbs:
+                            if resource == "securitycontextconstraints":
+                                if rule.resourceNames:
+                                    for resourceName in rule.resourceNames:
 
-                                if apiGroup == "":
-                                    resourceName = resource
-                                else:
-                                    resourceName = apiGroup
-                                    resourceName = ":"
-                                    resourceName = resource
+                                        try:
+                                            SSC_list = SSCs.get(name=resourceName)
+                                            sscNode = Node("SCC", name=SSC_list.metadata.name, uid=SSC_list.metadata.uid)
+                                            sscNode.__primarylabel__ = "SCC"
+                                            sscNode.__primarykey__ = "uid"
+                                        except: 
+                                            uid = "SCC_"+resourceName
+                                            sscNode = Node("AbsentSCC", name=resourceName, uid=uid)
+                                            sscNode.__primarylabel__ = "AbsentSCC"
+                                            sscNode.__primarykey__ = "uid"
 
-                                uid="cluster"+"_"+resourceName
-                                ressourceNode = Node("Resource", name=resourceName, uid=uid)
-                                ressourceNode.__primarylabel__ = "Resource"
-                                ressourceNode.__primarykey__ = "uid"
+                                        tx = graph.begin()
+                                        r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
+                                        node = tx.merge(roleNode) 
+                                        node = tx.merge(sscNode) 
+                                        node = tx.merge(r1) 
+                                        graph.commit(tx)
 
-                                tx = graph.begin()
-                                if verb == "impersonate":
-                                    r1 = Relationship(roleNode, "impers", ressourceNode)  
-                                else:
-                                    r1 = Relationship(roleNode, verb, ressourceNode)
-                                node = tx.merge(roleNode) 
-                                node = tx.merge(ressourceNode) 
-                                node = tx.merge(r1) 
-                                graph.commit(tx)
+                            else:
+                                for verb in rule.verbs:
+
+                                    if apiGroup == "":
+                                        resourceName = resource
+                                    else:
+                                        resourceName = apiGroup
+                                        resourceName = ":"
+                                        resourceName = resource
+
+                                    uid="Resource_cluster"+"_"+resourceName
+                                    ressourceNode = Node("Resource", name=resourceName, uid=uid)
+                                    ressourceNode.__primarylabel__ = "Resource"
+                                    ressourceNode.__primarykey__ = "uid"
+
+                                    tx = graph.begin()
+                                    if verb == "impersonate":
+                                        r1 = Relationship(roleNode, "impers", ressourceNode)  
+                                    else:
+                                        r1 = Relationship(roleNode, verb, ressourceNode)
+                                    node = tx.merge(roleNode) 
+                                    node = tx.merge(ressourceNode) 
+                                    node = tx.merge(r1) 
+                                    graph.commit(tx)
 
                 if rule.nonResourceURLs: 
                     for nonResourceURL in rule.nonResourceURLs: 
                         for verb in rule.verbs:
 
-                            uid="cluster"+"_"+nonResourceURL
+                            uid="ResourceNoUrl_cluster"+"_"+nonResourceURL
                             ressourceNode = Node("ResourceNoUrl", name=nonResourceURL, uid=uid)
                             ressourceNode.__primarylabel__ = "ResourceNoUrl"
                             ressourceNode.__primarykey__ = "uid"
@@ -320,6 +376,76 @@ if "all" in collector or "clusterrole" in collector:
 
 
 ##
+## User
+## 
+print("#### User ####")
+
+users = dyn_client.resources.get(api_version='v1', kind='User')
+user_list = users.get()
+
+# if "all" in collector or "pod" in collector:
+if "all" in collector or "user" in collector:
+    for enum in user_list.items:
+
+        name = enum.metadata.name
+        uid = enum.metadata.uid
+
+        userNode = Node("User", name=name, uid=uid)
+        userNode.__primarylabel__ = "User"
+        userNode.__primarykey__ = "uid"
+
+        tx = graph.begin()
+        node = tx.merge(userNode) 
+        graph.commit(tx)
+
+
+##
+## Group
+## 
+print("#### Group ####")
+
+groups = dyn_client.resources.get(api_version='v1', kind='Group')
+group_list = groups.get()
+
+# if "all" in collector or "pod" in collector:
+if "all" in collector or "group" in collector:
+    nbObject = len(group_list.items)
+    progress = 0.0
+    for enum in group_list.items:
+        progress=progress+1
+        print("Group progress = {}%".format(progress/nbObject*100.0))
+
+        name = enum.metadata.name
+        uid = enum.metadata.uid
+        userNames = enum.users
+
+        if userNames:
+            for user in userNames:
+                groupNode = Node("Group", name=name, uid=uid)
+                groupNode.__primarylabel__ = "Group"
+                groupNode.__primarykey__ = "uid"
+
+                try:
+                    user_list = users.get(name=user)
+                    # print(user_list)
+                    userNode = Node("User", name=user_list.metadata.name, uid=user_list.metadata.uid)
+                    userNode.__primarylabel__ = "User"
+                    userNode.__primarykey__ = "uid"
+                except: 
+                    uid = user
+                    userNode = Node("AbsentUser", name=user, uid=uid)
+                    userNode.__primarylabel__ = "AbsentUser"
+                    userNode.__primarykey__ = "uid"
+                
+                tx = graph.begin()
+                r1 = Relationship(groupNode, "CONTAIN USER", userNode)
+                node = tx.merge(groupNode) 
+                node = tx.merge(userNode) 
+                node = tx.merge(r1) 
+                graph.commit(tx)
+
+
+##
 ## RoleBinding
 ## 
 print("#### RoleBinding ####")
@@ -328,7 +454,12 @@ roleBindings = dyn_client.resources.get(api_version='rbac.authorization.k8s.io/v
 roleBinding_list = roleBindings.get()
 
 if "all" in collector or "rolebinding" in collector:
+    nbObject = len(roleBinding_list.items)
+    progress = 0.0
     for enum in roleBinding_list.items:
+        progress=progress+1
+        print("RoleBinding progress = {}%".format(progress/nbObject*100.0))
+
         # print(enum)
         name = enum.metadata.name
         uid = enum.metadata.uid
@@ -419,6 +550,85 @@ if "all" in collector or "rolebinding" in collector:
                         node = tx.merge(r2) 
                         node = tx.merge(r3) 
                         graph.commit(tx)
+
+                elif subjectKind == "Group": 
+                    if "system:serviceaccount:" in subjectName:
+                        namespace = subjectName.split(":")
+                        groupNamespace = namespace[2]
+
+                        try:
+                            project_list = projects.get(name=groupNamespace)
+                            groupNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+                            groupNode.__primarylabel__ = "Project"
+                            groupNode.__primarykey__ = "uid"
+
+                        except: 
+                            uid = groupNamespace
+                            groupNode = Node("AbsentProject", name=groupNamespace, uid=uid)
+                            groupNode.__primarylabel__ = "AbsentProject"
+                            groupNode.__primarykey__ = "uid"
+
+                    elif "system:" in subjectName:
+                        uid = subjectName
+                        groupNode = Node("SystemGroup", name=subjectName, uid=uid)
+                        groupNode.__primarylabel__ = "SystemGroup"
+                        groupNode.__primarykey__ = "uid"
+
+                    else:
+                        try:
+                            group_list = groups.get(name=subjectName)
+                            groupNode = Node("Group", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                            groupNode.__primarylabel__ = "Group"
+                            groupNode.__primarykey__ = "uid"
+
+                        except: 
+                            uid = subjectName
+                            groupNode = Node("AbsentGroup", name=subjectName, uid=uid)
+                            groupNode.__primarylabel__ = "AbsentGroup"
+                            groupNode.__primarykey__ = "uid"
+
+                    tx = graph.begin()
+                    r2 = Relationship(groupNode, "HAS ROLEBINDING", rolebindingNode)
+                    if roleKind == "ClusterRole":
+                        r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                    elif roleKind == "Role":
+                        r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                    node = tx.merge(groupNode) 
+                    node = tx.merge(rolebindingNode) 
+                    node = tx.merge(roleNode) 
+                    node = tx.merge(r2) 
+                    node = tx.merge(r3) 
+                    graph.commit(tx)
+
+                elif subjectKind == "User": 
+
+                    try:
+                        user_list = users.get(name=subjectName)
+                        userNode = Node("User", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                        userNode.__primarylabel__ = "User"
+                        userNode.__primarykey__ = "uid"
+
+                    except: 
+                        uid = subjectName
+                        userNode = Node("AbsentUser", name=subjectName, uid=uid)
+                        userNode.__primarylabel__ = "AbsentUser"
+                        userNode.__primarykey__ = "uid"
+
+                    tx = graph.begin()
+                    r2 = Relationship(userNode, "HAS ROLEBINDING", rolebindingNode)
+                    if roleKind == "ClusterRole":
+                        r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                    elif roleKind == "Role":
+                        r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                    node = tx.merge(userNode) 
+                    node = tx.merge(rolebindingNode) 
+                    node = tx.merge(roleNode) 
+                    node = tx.merge(r2) 
+                    node = tx.merge(r3) 
+                    graph.commit(tx)
+
+                else:
+                    print("[-] RoleBinding subjectKind not handled", subjectKind)
                                 
 
 ##
@@ -430,7 +640,12 @@ clusterRoleBindings = dyn_client.resources.get(api_version='rbac.authorization.k
 clusterRoleBinding_list = clusterRoleBindings.get()
  
 if "all" in collector or "clusterrolebinding" in collector:
+    nbObject = len(clusterRoleBinding_list.items)
+    progress = 0.0
     for enum in clusterRoleBinding_list.items:
+        progress=progress+1
+        print("ClusterRoleBinding progress = {}%".format(progress/nbObject*100.0))
+
         # print(enum)
         name = enum.metadata.name
         uid = enum.metadata.uid
@@ -519,16 +734,96 @@ if "all" in collector or "clusterrolebinding" in collector:
                         node = tx.merge(r3) 
                         graph.commit(tx)
 
+                elif subjectKind == "Group": 
+                    if "system:serviceaccount:" in subjectName:
+                        namespace = subjectName.split(":")
+                        groupNamespace = namespace[2]
+
+                        try:
+                            project_list = projects.get(name=groupNamespace)
+                            groupNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+                            groupNode.__primarylabel__ = "Project"
+                            groupNode.__primarykey__ = "uid"
+
+                        except: 
+                            uid = groupNamespace
+                            groupNode = Node("AbsentProject", name=groupNamespace, uid=uid)
+                            groupNode.__primarylabel__ = "AbsentProject"
+                            groupNode.__primarykey__ = "uid"
+
+                    elif "system:" in subjectName:
+                        uid = subjectName
+                        groupNode = Node("SystemGroup", name=subjectName, uid=uid)
+                        groupNode.__primarylabel__ = "SystemGroup"
+                        groupNode.__primarykey__ = "uid"
+
+                    else:
+                        try:
+                            group_list = groups.get(name=subjectName)
+                            groupNode = Node("Group", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                            groupNode.__primarylabel__ = "Group"
+                            groupNode.__primarykey__ = "uid"
+
+                        except: 
+                            uid = subjectName
+                            groupNode = Node("AbsentGroup", name=subjectName, uid=uid)
+                            groupNode.__primarylabel__ = "AbsentGroup"
+                            groupNode.__primarykey__ = "uid"
+
+                    tx = graph.begin()
+                    r2 = Relationship(groupNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                    if roleKind == "ClusterRole":
+                        r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                    elif roleKind == "Role":
+                        r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                    node = tx.merge(groupNode) 
+                    node = tx.merge(clusterRolebindingNode) 
+                    node = tx.merge(roleNode) 
+                    node = tx.merge(r2) 
+                    node = tx.merge(r3) 
+                    graph.commit(tx)
+
+                elif subjectKind == "User": 
+
+                    try:
+                        user_list = users.get(name=subjectName)
+                        userNode = Node("User", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                        userNode.__primarylabel__ = "User"
+                        userNode.__primarykey__ = "uid"
+
+                    except: 
+                        uid = subjectName
+                        userNode = Node("AbsentUser", name=subjectName, uid=uid)
+                        userNode.__primarylabel__ = "AbsentUser"
+                        userNode.__primarykey__ = "uid"
+
+                    tx = graph.begin()
+                    r2 = Relationship(userNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                    if roleKind == "ClusterRole":
+                        r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                    elif roleKind == "Role":
+                        r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                    node = tx.merge(userNode) 
+                    node = tx.merge(clusterRolebindingNode) 
+                    node = tx.merge(roleNode) 
+                    node = tx.merge(r2) 
+                    node = tx.merge(r3) 
+                    graph.commit(tx)
+
+                else:
+                    print("[-] RoleBinding subjectKind not handled", subjectKind)
+
 
 ##
 ## Route
 ## 
 print("#### Route ####")
 
-routes = dyn_client.resources.get(api_version='route.openshift.io/v1', kind='Route')
-route_list = routes.get()
-
 if "all" in collector or "route" in collector:
+
+    routes = dyn_client.resources.get(api_version='route.openshift.io/v1', kind='Route')
+    route_list = routes.get()
+
     for enum in route_list.items:
         # print(enum.metadata)
         name = enum.metadata.name
@@ -570,13 +865,13 @@ if "all" in collector or "route" in collector:
 ## 
 print("#### Pod ####")
 
-pods = dyn_client.resources.get(api_version='v1', kind='Pod')
-pod_list = pods.get()
-
 # if "all" in collector or "pod" in collector:
 if "pod" in collector:
+    pods = dyn_client.resources.get(api_version='v1', kind='Pod')
+    pod_list = pods.get()
+
     for enum in pod_list.items:
-        print(enum.metadata)
+        # print(enum.metadata)
 
         name = enum.metadata.name
         namespace = enum.metadata.namespace
@@ -606,27 +901,42 @@ if "pod" in collector:
 
 
 ##
-## Test
+## ConfigMap
 ## 
-# print("#### Test ####")
+print("#### ConfigMap ####")
 
-# role = clusterroles.get(name="admin")
+# if "all" in collector or "configmap" in collector:
+if "configmap" in collector:
+    configmaps = dyn_client.resources.get(api_version='v1', kind='ConfigMap')
+    configmap_list = configmaps.get()
+
+    for enum in configmap_list.items:
+        # print(enum.metadata)
+
+        name = enum.metadata.name
+        namespace = enum.metadata.namespace
+        uid = enum.metadata.uid
+
+        try:
+            project_list = projects.get(name=namespace)
+            projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+            projectNode.__primarylabel__ = "Project"
+            projectNode.__primarykey__ = "uid"
+
+        except: 
+            projectNode = Node("AbsentProject",name=namespace)
+            projectNode.__primarylabel__ = "AbsentProject"
+            projectNode.__primarykey__ = "name"
+
+        configmapNode = Node("ConfigMap",name=name, namespace=namespace, uid=uid)
+        configmapNode.__primarylabel__ = "ConfigMap"
+        configmapNode.__primarykey__ = "uid"
+
+        tx = graph.begin()
+        relationShip = Relationship(projectNode, "CONTAIN CONFIGMAP", configmapNode)
+        node = tx.merge(projectNode) 
+        node = tx.merge(configmapNode) 
+        node = tx.merge(relationShip) 
+        graph.commit(tx)
 
 
-# if role.rules:
-#     for rule in role.rules:
-#         if rule.apiGroups:
-#             for apiGroup in rule.apiGroups:
-#                 for resource in rule.resources:
-#                     for verb in rule.verbs:
-#                         if apiGroup == "":
-#                             print("void", resource, verb)
-
-
-# print("#### Secret ####")
-
-# pods = dyn_client.resources.get(api_version='v1', kind='Secret')
-# pod_list = pods.get()
-
-# for enum in pod_list.items:
-#     print(enum.metadata)
