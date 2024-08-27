@@ -1,6 +1,7 @@
 import argparse
 from argparse import RawTextHelpFormatter
 import sys
+import os
 
 import json
 import subprocess
@@ -41,6 +42,8 @@ userNeo4j = args.userNeo4j
 passwordNeo4j = args.passwordNeo4j
 collector = args.collector
 
+release = True
+
 
 ##
 ## Init OC
@@ -79,12 +82,23 @@ project_list = projects.get()
 if "all" in collector or "project" in collector:
     for enum in project_list.items:
         # print(enum.metadata)
-        tx = graph.begin()
-        a = Node("Project", name=enum.metadata.name, uid=enum.metadata.uid)
-        a.__primarylabel__ = "Project"
-        a.__primarykey__ = "uid"
-        node = tx.merge(a) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            a = Node("Project", name=enum.metadata.name, uid=enum.metadata.uid)
+            a.__primarylabel__ = "Project"
+            a.__primarykey__ = "uid"
+            node = tx.merge(a) 
+            graph.commit(tx)
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 
 ##
@@ -98,30 +112,42 @@ serviceAccount_list = serviceAccounts.get()
 if "all" in collector or "sa" in collector:
     for enum in serviceAccount_list.items:
         # print(enum.metadata)
-        tx = graph.begin()
-        a = Node("ServiceAccount", name=enum.metadata.name, namespace=enum.metadata.namespace, uid=enum.metadata.uid)
-        a.__primarylabel__ = "ServiceAccount"
-        a.__primarykey__ = "uid"
-
         try:
-            project_list = projects.get(name=enum.metadata.namespace)
-            projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
-            projectNode.__primarylabel__ = "Project"
-            projectNode.__primarykey__ = "uid"
+            tx = graph.begin()
+            a = Node("ServiceAccount", name=enum.metadata.name, namespace=enum.metadata.namespace, uid=enum.metadata.uid)
+            a.__primarylabel__ = "ServiceAccount"
+            a.__primarykey__ = "uid"
 
-        except: 
-            uid = enum.metadata.namespace
-            projectNode = Node("AbsentProject", name=enum.metadata.namespace, uid=uid)
-            projectNode.__primarylabel__ = "AbsentProject"
-            projectNode.__primarykey__ = "uid"
+            try:
+                project_list = projects.get(name=enum.metadata.namespace)
+                projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
+                projectNode.__primarylabel__ = "Project"
+                projectNode.__primarykey__ = "uid"
+
+            except: 
+                uid = enum.metadata.namespace
+                projectNode = Node("AbsentProject", name=enum.metadata.namespace, uid=uid)
+                projectNode.__primarylabel__ = "AbsentProject"
+                projectNode.__primarykey__ = "uid"
 
 
-        r2 = Relationship(projectNode, "CONTAIN SA", a)
+            r2 = Relationship(projectNode, "CONTAIN SA", a)
 
-        node = tx.merge(a) 
-        node = tx.merge(projectNode) 
-        node = tx.merge(r2) 
-        graph.commit(tx)
+            node = tx.merge(a) 
+            node = tx.merge(projectNode) 
+            node = tx.merge(r2) 
+            graph.commit(tx)
+
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 
 ##
@@ -135,12 +161,25 @@ SSC_list = SSCs.get()
 if "all" in collector or "scc" in collector:
     for enum in SSC_list.items:
         
-        tx = graph.begin()
-        a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
-        a.__primarylabel__ = "SCC"
-        a.__primarykey__ = "uid"
-        node = tx.merge(a) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
+            a.__primarylabel__ = "SCC"
+            a.__primarykey__ = "uid"
+            node = tx.merge(a) 
+            graph.commit(tx)
+
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
+
 
 
 # ##
@@ -211,9 +250,21 @@ if "all" in collector or "role" in collector:
         roleNode = Node("Role",name=role.metadata.name, namespace=role.metadata.namespace, uid=role.metadata.uid)
         roleNode.__primarylabel__ = "Role"
         roleNode.__primarykey__ = "uid"
-        tx = graph.begin()
-        node = tx.merge(roleNode) 
-        graph.commit(tx)
+
+        try:
+            tx = graph.begin()
+            node = tx.merge(roleNode) 
+            graph.commit(tx)
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
         if role.rules:
             for rule in role.rules:
@@ -235,12 +286,24 @@ if "all" in collector or "role" in collector:
                                             sscNode.__primarylabel__ = "AbsentSCC"
                                             sscNode.__primarykey__ = "uid"
 
-                                        tx = graph.begin()
-                                        r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
-                                        node = tx.merge(roleNode) 
-                                        node = tx.merge(sscNode) 
-                                        node = tx.merge(r1) 
-                                        graph.commit(tx)
+                                        try:
+                                            tx = graph.begin()
+                                            r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
+                                            node = tx.merge(roleNode) 
+                                            node = tx.merge(sscNode) 
+                                            node = tx.merge(r1) 
+                                            graph.commit(tx)
+
+                                        except Exception as e: 
+                                            if release:
+                                                print(e)
+                                                pass
+                                            else:
+                                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                                print(exc_type, fname, exc_tb.tb_lineno)
+                                                print("Error:", e)
+                                                sys.exit(1)
 
                             else:
                                 for verb in rule.verbs:
@@ -257,15 +320,27 @@ if "all" in collector or "role" in collector:
                                     ressourceNode.__primarylabel__ = "Resource"
                                     ressourceNode.__primarykey__ = "uid"
 
-                                    tx = graph.begin()
-                                    if verb == "impersonate":
-                                        r1 = Relationship(roleNode, "impers", ressourceNode)  
-                                    else:
-                                        r1 = Relationship(roleNode, verb, ressourceNode)
-                                    node = tx.merge(roleNode) 
-                                    node = tx.merge(ressourceNode) 
-                                    node = tx.merge(r1) 
-                                    graph.commit(tx)
+                                    try:
+                                        tx = graph.begin()
+                                        if verb == "impersonate":
+                                            r1 = Relationship(roleNode, "impers", ressourceNode)  
+                                        else:
+                                            r1 = Relationship(roleNode, verb, ressourceNode)
+                                        node = tx.merge(roleNode) 
+                                        node = tx.merge(ressourceNode) 
+                                        node = tx.merge(r1) 
+                                        graph.commit(tx)
+
+                                    except Exception as e: 
+                                        if release:
+                                            print(e)
+                                            pass
+                                        else:
+                                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                            print(exc_type, fname, exc_tb.tb_lineno)
+                                            print("Error:", e)
+                                            sys.exit(1)
 
                 if rule.nonResourceURLs: 
                     for nonResourceURL in rule.nonResourceURLs: 
@@ -276,12 +351,24 @@ if "all" in collector or "role" in collector:
                             ressourceNode.__primarylabel__ = "ResourceNoUrl"
                             ressourceNode.__primarykey__ = "uid"
 
-                            tx = graph.begin()
-                            r1 = Relationship(roleNode, verb, ressourceNode)
-                            node = tx.merge(roleNode) 
-                            node = tx.merge(ressourceNode) 
-                            node = tx.merge(r1) 
-                            graph.commit(tx)
+                            try:
+                                tx = graph.begin()
+                                r1 = Relationship(roleNode, verb, ressourceNode)
+                                node = tx.merge(roleNode) 
+                                node = tx.merge(ressourceNode) 
+                                node = tx.merge(r1) 
+                                graph.commit(tx)
+
+                            except Exception as e: 
+                                if release:
+                                    print(e)
+                                    pass
+                                else:
+                                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                    print(exc_type, fname, exc_tb.tb_lineno)
+                                    print("Error:", e)
+                                    sys.exit(1)
 
 
 ##
@@ -299,12 +386,24 @@ if "all" in collector or "clusterrole" in collector:
         progress=progress+1
         print("ClusterRole progress = {}%".format(progress/nbObject*100.0))
 
-        tx = graph.begin()
-        roleNode = Node("ClusterRole", name=role.metadata.name, uid=role.metadata.uid)
-        roleNode.__primarylabel__ = "ClusterRole"
-        roleNode.__primarykey__ = "uid"
-        node = tx.merge(roleNode) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            roleNode = Node("ClusterRole", name=role.metadata.name, uid=role.metadata.uid)
+            roleNode.__primarylabel__ = "ClusterRole"
+            roleNode.__primarykey__ = "uid"
+            node = tx.merge(roleNode) 
+            graph.commit(tx)
+
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
         if role.rules:
             for rule in role.rules:
@@ -326,12 +425,24 @@ if "all" in collector or "clusterrole" in collector:
                                             sscNode.__primarylabel__ = "AbsentSCC"
                                             sscNode.__primarykey__ = "uid"
 
-                                        tx = graph.begin()
-                                        r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
-                                        node = tx.merge(roleNode) 
-                                        node = tx.merge(sscNode) 
-                                        node = tx.merge(r1) 
-                                        graph.commit(tx)
+                                        try:
+                                            tx = graph.begin()
+                                            r1 = Relationship(roleNode, "CAN USE SCC", sscNode)
+                                            node = tx.merge(roleNode) 
+                                            node = tx.merge(sscNode) 
+                                            node = tx.merge(r1) 
+                                            graph.commit(tx)
+
+                                        except Exception as e: 
+                                            if release:
+                                                print(e)
+                                                pass
+                                            else:
+                                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                                print(exc_type, fname, exc_tb.tb_lineno)
+                                                print("Error:", e)
+                                                sys.exit(1)
 
                             else:
                                 for verb in rule.verbs:
@@ -348,15 +459,27 @@ if "all" in collector or "clusterrole" in collector:
                                     ressourceNode.__primarylabel__ = "Resource"
                                     ressourceNode.__primarykey__ = "uid"
 
-                                    tx = graph.begin()
-                                    if verb == "impersonate":
-                                        r1 = Relationship(roleNode, "impers", ressourceNode)  
-                                    else:
-                                        r1 = Relationship(roleNode, verb, ressourceNode)
-                                    node = tx.merge(roleNode) 
-                                    node = tx.merge(ressourceNode) 
-                                    node = tx.merge(r1) 
-                                    graph.commit(tx)
+                                    try:
+                                        tx = graph.begin()
+                                        if verb == "impersonate":
+                                            r1 = Relationship(roleNode, "impers", ressourceNode)  
+                                        else:
+                                            r1 = Relationship(roleNode, verb, ressourceNode)
+                                        node = tx.merge(roleNode) 
+                                        node = tx.merge(ressourceNode) 
+                                        node = tx.merge(r1) 
+                                        graph.commit(tx)
+
+                                    except Exception as e: 
+                                        if release:
+                                            print(e)
+                                            pass
+                                        else:
+                                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                            print(exc_type, fname, exc_tb.tb_lineno)
+                                            print("Error:", e)
+                                            sys.exit(1)
 
                 if rule.nonResourceURLs: 
                     for nonResourceURL in rule.nonResourceURLs: 
@@ -367,12 +490,24 @@ if "all" in collector or "clusterrole" in collector:
                             ressourceNode.__primarylabel__ = "ResourceNoUrl"
                             ressourceNode.__primarykey__ = "uid"
 
-                            tx = graph.begin()
-                            r1 = Relationship(roleNode, verb, ressourceNode)
-                            node = tx.merge(roleNode) 
-                            node = tx.merge(ressourceNode) 
-                            node = tx.merge(r1) 
-                            graph.commit(tx)
+                            try:
+                                tx = graph.begin()
+                                r1 = Relationship(roleNode, verb, ressourceNode)
+                                node = tx.merge(roleNode) 
+                                node = tx.merge(ressourceNode) 
+                                node = tx.merge(r1) 
+                                graph.commit(tx)
+
+                            except Exception as e: 
+                                if release:
+                                    print(e)
+                                    pass
+                                else:
+                                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                    print(exc_type, fname, exc_tb.tb_lineno)
+                                    print("Error:", e)
+                                    sys.exit(1)
 
 
 ##
@@ -394,10 +529,21 @@ if "all" in collector or "user" in collector:
         userNode.__primarylabel__ = "User"
         userNode.__primarykey__ = "uid"
 
-        tx = graph.begin()
-        node = tx.merge(userNode) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            node = tx.merge(userNode) 
+            graph.commit(tx)
 
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 ##
 ## Group
@@ -437,12 +583,24 @@ if "all" in collector or "group" in collector:
                     userNode.__primarylabel__ = "AbsentUser"
                     userNode.__primarykey__ = "uid"
                 
-                tx = graph.begin()
-                r1 = Relationship(groupNode, "CONTAIN USER", userNode)
-                node = tx.merge(groupNode) 
-                node = tx.merge(userNode) 
-                node = tx.merge(r1) 
-                graph.commit(tx)
+                try:
+                    tx = graph.begin()
+                    r1 = Relationship(groupNode, "CONTAIN USER", userNode)
+                    node = tx.merge(groupNode) 
+                    node = tx.merge(userNode) 
+                    node = tx.merge(r1) 
+                    graph.commit(tx)
+
+                except Exception as e: 
+                    if release:
+                        print(e)
+                        pass
+                    else:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        print(exc_type, fname, exc_tb.tb_lineno)
+                        print("Error:", e)
+                        sys.exit(1)
 
 
 ##
@@ -535,21 +693,33 @@ if "all" in collector or "rolebinding" in collector:
                             subjectNode.__primarykey__ = "uid"
                             # print("!!!! serviceAccount related to Role: ", roleName ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')
 
-                        tx = graph.begin()
-                        r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-                        r2 = Relationship(subjectNode, "HAS ROLEBINDING", rolebindingNode)
-                        if roleKind == "ClusterRole":
-                            r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
-                        elif roleKind == "Role":
-                            r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
-                        node = tx.merge(projectNode) 
-                        node = tx.merge(subjectNode) 
-                        node = tx.merge(rolebindingNode) 
-                        node = tx.merge(roleNode) 
-                        node = tx.merge(r1) 
-                        node = tx.merge(r2) 
-                        node = tx.merge(r3) 
-                        graph.commit(tx)
+                        try:
+                            tx = graph.begin()
+                            r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
+                            r2 = Relationship(subjectNode, "HAS ROLEBINDING", rolebindingNode)
+                            if roleKind == "ClusterRole":
+                                r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                            elif roleKind == "Role":
+                                r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                            node = tx.merge(projectNode) 
+                            node = tx.merge(subjectNode) 
+                            node = tx.merge(rolebindingNode) 
+                            node = tx.merge(roleNode) 
+                            node = tx.merge(r1) 
+                            node = tx.merge(r2) 
+                            node = tx.merge(r3) 
+                            graph.commit(tx)
+
+                        except Exception as e: 
+                            if release:
+                                print(e)
+                                pass
+                            else:
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno)
+                                print("Error:", e)
+                                sys.exit(1)
 
                 elif subjectKind == "Group": 
                     if "system:serviceaccount:" in subjectName:
@@ -587,18 +757,30 @@ if "all" in collector or "rolebinding" in collector:
                             groupNode.__primarylabel__ = "AbsentGroup"
                             groupNode.__primarykey__ = "uid"
 
-                    tx = graph.begin()
-                    r2 = Relationship(groupNode, "HAS ROLEBINDING", rolebindingNode)
-                    if roleKind == "ClusterRole":
-                        r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
-                    elif roleKind == "Role":
-                        r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
-                    node = tx.merge(groupNode) 
-                    node = tx.merge(rolebindingNode) 
-                    node = tx.merge(roleNode) 
-                    node = tx.merge(r2) 
-                    node = tx.merge(r3) 
-                    graph.commit(tx)
+                    try:
+                        tx = graph.begin()
+                        r2 = Relationship(groupNode, "HAS ROLEBINDING", rolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(groupNode) 
+                        node = tx.merge(rolebindingNode) 
+                        node = tx.merge(roleNode) 
+                        node = tx.merge(r2) 
+                        node = tx.merge(r3) 
+                        graph.commit(tx)
+
+                    except Exception as e: 
+                        if release:
+                            print(e)
+                            pass
+                        else:
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
+                            print("Error:", e)
+                            sys.exit(1)
 
                 elif subjectKind == "User": 
 
@@ -614,6 +796,7 @@ if "all" in collector or "rolebinding" in collector:
                         userNode.__primarylabel__ = "AbsentUser"
                         userNode.__primarykey__ = "uid"
 
+                try:
                     tx = graph.begin()
                     r2 = Relationship(userNode, "HAS ROLEBINDING", rolebindingNode)
                     if roleKind == "ClusterRole":
@@ -626,6 +809,17 @@ if "all" in collector or "rolebinding" in collector:
                     node = tx.merge(r2) 
                     node = tx.merge(r3) 
                     graph.commit(tx)
+
+                except Exception as e: 
+                    if release:
+                        print(e)
+                        pass
+                    else:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        print(exc_type, fname, exc_tb.tb_lineno)
+                        print("Error:", e)
+                        sys.exit(1)
 
                 else:
                     print("[-] RoleBinding subjectKind not handled", subjectKind)
@@ -718,21 +912,33 @@ if "all" in collector or "clusterrolebinding" in collector:
                             subjectNode.__primarykey__ = "uid"
                             # print("!!!! serviceAccount related to Role: ", roleName ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')
 
-                        tx = graph.begin()
-                        r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-                        r2 = Relationship(subjectNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
-                        if roleKind == "ClusterRole":
-                            r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
-                        elif roleKind == "Role":
-                            r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
-                        node = tx.merge(projectNode) 
-                        node = tx.merge(subjectNode) 
-                        node = tx.merge(clusterRolebindingNode) 
-                        node = tx.merge(roleNode) 
-                        node = tx.merge(r1) 
-                        node = tx.merge(r2) 
-                        node = tx.merge(r3) 
-                        graph.commit(tx)
+                        try: 
+                            tx = graph.begin()
+                            r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
+                            r2 = Relationship(subjectNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                            if roleKind == "ClusterRole":
+                                r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                            elif roleKind == "Role":
+                                r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                            node = tx.merge(projectNode) 
+                            node = tx.merge(subjectNode) 
+                            node = tx.merge(clusterRolebindingNode) 
+                            node = tx.merge(roleNode) 
+                            node = tx.merge(r1) 
+                            node = tx.merge(r2) 
+                            node = tx.merge(r3) 
+                            graph.commit(tx)
+
+                        except Exception as e: 
+                            if release:
+                                print(e)
+                                pass
+                            else:
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno)
+                                print("Error:", e)
+                                sys.exit(1)
 
                 elif subjectKind == "Group": 
                     if "system:serviceaccount:" in subjectName:
@@ -770,18 +976,30 @@ if "all" in collector or "clusterrolebinding" in collector:
                             groupNode.__primarylabel__ = "AbsentGroup"
                             groupNode.__primarykey__ = "uid"
 
-                    tx = graph.begin()
-                    r2 = Relationship(groupNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
-                    if roleKind == "ClusterRole":
-                        r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
-                    elif roleKind == "Role":
-                        r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
-                    node = tx.merge(groupNode) 
-                    node = tx.merge(clusterRolebindingNode) 
-                    node = tx.merge(roleNode) 
-                    node = tx.merge(r2) 
-                    node = tx.merge(r3) 
-                    graph.commit(tx)
+                    try:
+                        tx = graph.begin()
+                        r2 = Relationship(groupNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(groupNode) 
+                        node = tx.merge(clusterRolebindingNode) 
+                        node = tx.merge(roleNode) 
+                        node = tx.merge(r2) 
+                        node = tx.merge(r3) 
+                        graph.commit(tx)
+
+                    except Exception as e: 
+                        if release:
+                            print(e)
+                            pass
+                        else:
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
+                            print("Error:", e)
+                            sys.exit(1)
 
                 elif subjectKind == "User": 
 
@@ -797,18 +1015,30 @@ if "all" in collector or "clusterrolebinding" in collector:
                         userNode.__primarylabel__ = "AbsentUser"
                         userNode.__primarykey__ = "uid"
 
-                    tx = graph.begin()
-                    r2 = Relationship(userNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
-                    if roleKind == "ClusterRole":
-                        r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
-                    elif roleKind == "Role":
-                        r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
-                    node = tx.merge(userNode) 
-                    node = tx.merge(clusterRolebindingNode) 
-                    node = tx.merge(roleNode) 
-                    node = tx.merge(r2) 
-                    node = tx.merge(r3) 
-                    graph.commit(tx)
+                    try:
+                        tx = graph.begin()
+                        r2 = Relationship(userNode, "HAS CLUSTERROLEBINDING", clusterRolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(clusterRolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(clusterRolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(userNode) 
+                        node = tx.merge(clusterRolebindingNode) 
+                        node = tx.merge(roleNode) 
+                        node = tx.merge(r2) 
+                        node = tx.merge(r3) 
+                        graph.commit(tx)
+
+                    except Exception as e: 
+                        if release:
+                            print(e)
+                            pass
+                        else:
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
+                            print("Error:", e)
+                            sys.exit(1)
 
                 else:
                     print("[-] RoleBinding subjectKind not handled", subjectKind)
@@ -852,12 +1082,24 @@ if "all" in collector or "route" in collector:
         routeNode.__primarylabel__ = "Route"
         routeNode.__primarykey__ = "uid"
 
-        tx = graph.begin()
-        relationShip = Relationship(projectNode, "CONTAIN ROUTE", routeNode)
-        node = tx.merge(projectNode) 
-        node = tx.merge(routeNode) 
-        node = tx.merge(relationShip) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            relationShip = Relationship(projectNode, "CONTAIN ROUTE", routeNode)
+            node = tx.merge(projectNode) 
+            node = tx.merge(routeNode) 
+            node = tx.merge(relationShip) 
+            graph.commit(tx)
+
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 
 ##
@@ -892,13 +1134,24 @@ if "pod" in collector:
         podNode.__primarylabel__ = "Pod"
         podNode.__primarykey__ = "uid"
 
-        tx = graph.begin()
-        relationShip = Relationship(projectNode, "CONTAIN POD", podNode)
-        node = tx.merge(projectNode) 
-        node = tx.merge(podNode) 
-        node = tx.merge(relationShip) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            relationShip = Relationship(projectNode, "CONTAIN POD", podNode)
+            node = tx.merge(projectNode) 
+            node = tx.merge(podNode) 
+            node = tx.merge(relationShip) 
+            graph.commit(tx)
 
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 ##
 ## ConfigMap
@@ -932,11 +1185,23 @@ if "configmap" in collector:
         configmapNode.__primarylabel__ = "ConfigMap"
         configmapNode.__primarykey__ = "uid"
 
-        tx = graph.begin()
-        relationShip = Relationship(projectNode, "CONTAIN CONFIGMAP", configmapNode)
-        node = tx.merge(projectNode) 
-        node = tx.merge(configmapNode) 
-        node = tx.merge(relationShip) 
-        graph.commit(tx)
+        try:
+            tx = graph.begin()
+            relationShip = Relationship(projectNode, "CONTAIN CONFIGMAP", configmapNode)
+            node = tx.merge(projectNode) 
+            node = tx.merge(configmapNode) 
+            node = tx.merge(relationShip) 
+            graph.commit(tx)
+
+        except Exception as e: 
+            if release:
+                print(e)
+                pass
+            else:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+                print("Error:", e)
+                sys.exit(1)
 
 
