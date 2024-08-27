@@ -59,30 +59,32 @@ python3 OpenShiftGrapher.py -a "https://api.cluster.net:6443" -t $(cat quota.tok
 
 ### Exemples of Queries
 
+Those queries are not up to date with the last version of the tool
+
 ```
 MATCH (n:AbsentServiceAccount {name:"servicenow-sa"}) RETURN n LIMIT 25  
 
 MATCH p=(n1:Project) WHERE NOT (n1.name =~ ('openshift.*') OR n1.name =~ ('test'))  RETURN p LIMIT 25  
 
-MATCH p=(n:AbsentServiceAccount {name:"servicenow-sa"})-[r:`HAS CLUSTER ROLE`]->() RETURN p LIMIT 25  
+MATCH p=(n:AbsentServiceAccount {name:"servicenow-sa"})-[]->()-[r:`HAS CLUSTERROLE`]->() RETURN p LIMIT 25  
 
-MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[r2:`HAS CLUSTER ROLE`]->() RETURN p LIMIT 25  
+MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[]->()-[r2:`HAS CLUSTERROLE`]->() RETURN p LIMIT 25  
 
-MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) RETURN p LIMIT 25  
+MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[]->()-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) RETURN p LIMIT 25  
 
-MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) RETURN p LIMIT 25  
+MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) RETURN p LIMIT 25  
 
-MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[r2:`CAN USE SCC`]->() RETURN p LIMIT 25  
+MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[]->()-[r2:`CAN USE SCC`]->() RETURN p LIMIT 25  
 
-MATCH p=(n2:AbsentServiceAccount)-[r2:`CAN USE SCC`]->() RETURN p LIMIT 25  
+MATCH p=(n2:AbsentServiceAccount)-[]->()-[r2:`CAN USE SCC`]->() RETURN p LIMIT 25  
 
-MATCH p=()-[r2:`HAS CLUSTER ROLE`]->()-[r1:`create`]->() RETURN p LIMIT 25  
+MATCH p=()-[r2:`HAS CLUSTERROLE`]->()-[r1:`create`]->() RETURN p LIMIT 25  
 
 MATCH p=(n1:Role)-[r1:`create`]->() RETURN p LIMIT 25  
 
-MATCH p=(n2:ServiceAccount)-[]->(n1:Role)-[]->() RETURN p LIMIT 100  
+MATCH p=(n2:ServiceAccount)-[]->()-[]->(n1:Role)-[]->() RETURN p LIMIT 100  
 
-MATCH p=(n2:AbsentServiceAccount)-[]->(n1:Role)-[r1:`create`]->() RETURN p LIMIT 100  
+MATCH p=(n2:AbsentServiceAccount)-[]->()-[]->(n1:Role)-[r1:`create`]->() RETURN p LIMIT 100  
 
 MATCH p=(n1)-[r2:`CAN USE SCC`]->(n2) WHERE NOT (n2.name =~ ('acs-splunk'))  RETURN p LIMIT 25  
 
@@ -90,30 +92,31 @@ MATCH p=(n1)-[r2:`CAN USE SCC`]->(n2) WHERE NOT (n2.name =~ ('acs-splunk.*'))  R
 
 MATCH p=(n4:Resource) WHERE (n4.name =~ ('secrets')) RETURN p LIMIT 25  
 
-MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->(n3:Role)-[r1:`*`]->(n4:Resource) WHERE NOT (n1.name =~ ('openshift.*') OR n1.name =~ ('test'))  RETURN p LIMIT 25  
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[]->(n3:Role)-[r1:`*`]->(n4:Resource) WHERE NOT (n1.name =~ ('openshift.*') OR n1.name =~ ('test'))  RETURN p LIMIT 25  
 
 MATCH p=(n4:Resource) WHERE (n4.name =~ ('.*bypass.*')) RETURN p LIMIT 25  
 
-MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->(n3:Role)-[]->(n4:Resource) WHERE NOT (n1.name =~ ('openshift.*'))  RETURN p LIMIT 1000
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[]->(n3:Role)-[]->(n4:Resource) WHERE NOT (n1.name =~ ('openshift.*'))  RETURN p LIMIT 1000
 
-MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->(n3:Role)-[]->(n4:Resource) RETURN p LIMIT 1000
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[]->(n3:Role)-[]->(n4:Resource) RETURN p LIMIT 1000
 
-MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
+MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[]->()-[r2:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
 
-MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[r2:`create`]->(n4:Resource) WHERE (n4.name =~ ('namespaces')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
+MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[]->()-[]->()-[r2:`create`]->(n4:Resource) WHERE (n4.name =~ ('namespaces')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
 
 ```
 
 ### SA not in openshift* project that can use SCC
 
 ```
-MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[r1:`CAN USE SCC`]->() WHERE NOT (n1.name =~ ('openshift.*'))  RETURN p LIMIT 100
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[]->()-[r1:`CAN USE SCC`]->() WHERE NOT (n1.name =~ ('openshift.*'))  RETURN p LIMIT 100
 ```
 
 ### SA not in openshift* project that has cluster role that can read secrets
 
 ```
-MATCH p=(n1:Project)-[r1:`CONTAIN SA`]->(n2:ServiceAccount)-[r2:`HAS CLUSTER ROLE`]->()-[r3:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[r1:`HAS CLUSTERROLE`]->()-[]->(n4:Resource) RETURN p LIMIT 25  
+MATCH p=(n1:Project)-[]->(n2:ServiceAccount)-[]->()-[r2:`HAS CLUSTERROLE`]->()-[r3:`get`]->(n4:Resource) WHERE (n4.name =~ ('secrets')) AND NOT (n1.name =~ ('openshift.*')) RETURN p LIMIT 200  
 ```
 
 ## Potential vulnerability
@@ -123,13 +126,13 @@ It happens that cluster is deployed with preconfigured template automatically se
 ### Absent SA that can use SCC
 
 ```
-MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[r2:`CAN USE SCC`]->() RETURN p LIMIT 25  
+MATCH p=(n1:AbsentProject)-[]->(n2:AbsentServiceAccount)-[]->()-[]->()-[r1:`CAN USE SCC`]->() WHERE NOT (n1.name =~ ('openshift.*'))  RETURN p LIMIT 100 
 ```
 
 ### Absent SA that has cluster role
 
 ```
-MATCH p=(n1:AbsentProject)-[r1:`CONTAIN SA`]->(n2:AbsentServiceAccount)-[r2:`HAS CLUSTER ROLE`]->() RETURN p LIMIT 25  
+MATCH p=(n1:AbsentProject)-[]->(n2:AbsentServiceAccount)-[]->()-[r1:`HAS CLUSTERROLE`]->() RETURN p LIMIT 25  
 ```
 
 ## EnumAbsentObject
