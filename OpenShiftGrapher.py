@@ -796,30 +796,30 @@ if "all" in collector or "rolebinding" in collector:
                         userNode.__primarylabel__ = "AbsentUser"
                         userNode.__primarykey__ = "uid"
 
-                try:
-                    tx = graph.begin()
-                    r2 = Relationship(userNode, "HAS ROLEBINDING", rolebindingNode)
-                    if roleKind == "ClusterRole":
-                        r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
-                    elif roleKind == "Role":
-                        r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
-                    node = tx.merge(userNode) 
-                    node = tx.merge(rolebindingNode) 
-                    node = tx.merge(roleNode) 
-                    node = tx.merge(r2) 
-                    node = tx.merge(r3) 
-                    graph.commit(tx)
+                    try:
+                        tx = graph.begin()
+                        r2 = Relationship(userNode, "HAS ROLEBINDING", rolebindingNode)
+                        if roleKind == "ClusterRole":
+                            r3 = Relationship(rolebindingNode, "HAS CLUSTERROLE", roleNode)
+                        elif roleKind == "Role":
+                            r3 = Relationship(rolebindingNode, "HAS ROLE", roleNode)
+                        node = tx.merge(userNode) 
+                        node = tx.merge(rolebindingNode) 
+                        node = tx.merge(roleNode) 
+                        node = tx.merge(r2) 
+                        node = tx.merge(r3) 
+                        graph.commit(tx)
 
-                except Exception as e: 
-                    if release:
-                        print(e)
-                        pass
-                    else:
-                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        print(exc_type, fname, exc_tb.tb_lineno)
-                        print("Error:", e)
-                        sys.exit(1)
+                    except Exception as e: 
+                        if release:
+                            print(e)
+                            pass
+                        else:
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno)
+                            print("Error:", e)
+                            sys.exit(1)
 
                 else:
                     print("[-] RoleBinding subjectKind not handled", subjectKind)
