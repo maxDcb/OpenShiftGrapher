@@ -786,7 +786,7 @@ if "all" in collector or "rolebinding" in collector:
 
                     try:
                         user_list = users.get(name=subjectName)
-                        userNode = Node("User", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                        userNode = Node("User", name=user_list.metadata.name, uid=user_list.metadata.uid)
                         userNode.__primarylabel__ = "User"
                         userNode.__primarykey__ = "uid"
 
@@ -1005,7 +1005,7 @@ if "all" in collector or "clusterrolebinding" in collector:
 
                     try:
                         user_list = users.get(name=subjectName)
-                        userNode = Node("User", name=group_list.metadata.name, uid=group_list.metadata.uid)
+                        userNode = Node("User", name=user_list.metadata.name, uid=user_list.metadata.uid)
                         userNode.__primarylabel__ = "User"
                         userNode.__primarykey__ = "uid"
 
