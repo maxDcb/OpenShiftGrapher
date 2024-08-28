@@ -181,60 +181,6 @@ if "all" in collector or "scc" in collector:
                 sys.exit(1)
 
 
-
-# ##
-# ## SSC Binding
-# ## 
-# print("#### SSC Binding ####")
-
-# if "all" in collector or "scc" in collector:
-#     for enum in SSC_list.items:
-#         # print(enum.metadata)
-#         process = subprocess.run(["oc", "--token={}".format(api_key), "adm", "policy", "who-can", "use", "scc", enum.metadata.name, "-A"], check=True, stdout=subprocess.PIPE, universal_newlines=True)
-#         info = process.stdout
-#         for line in info.split('\n'):
-#             if "system:serviceaccount:" in line:
-#                 test = line.split(":")
-#                 subjectNamespace = test[2]
-#                 subjectName = test[3]
-
-#                 try:
-#                     serviceAccount = serviceAccounts.get(name=subjectName, namespace=subjectNamespace)
-#                     subjectNode = Node("ServiceAccount",name=serviceAccount.metadata.name, namespace=serviceAccount.metadata.namespace, uid=serviceAccount.metadata.uid)
-#                     subjectNode.__primarylabel__ = "ServiceAccount"
-#                     subjectNode.__primarykey__ = "uid"
-#                 except: 
-#                     uid = subjectName+"_"+subjectNamespace
-#                     subjectNode = Node("AbsentServiceAccount", name=subjectName, namespace=subjectNamespace, uid=uid)
-#                     subjectNode.__primarylabel__ = "AbsentServiceAccount"
-#                     subjectNode.__primarykey__ = "uid"  
-#                     # print("!!!! serviceAccount related to SSC: ", enum.metadata.name ,", don't exist: ", subjectNamespace, ":", subjectName, sep='')    
-
-#                 try:
-#                     project_list = projects.get(name=subjectNamespace)
-#                     projectNode = Node("Project",name=project_list.metadata.name, uid=project_list.metadata.uid)
-#                     projectNode.__primarylabel__ = "Project"
-#                     projectNode.__primarykey__ = "uid"
-
-#                 except: 
-#                     uid = subjectNamespace
-#                     projectNode = Node("AbsentProject",name=subjectNamespace, uid=uid)
-#                     projectNode.__primarylabel__ = "AbsentProject"
-#                     projectNode.__primarykey__ = "uid"      
-
-#                 tx = graph.begin()
-#                 a = Node("SCC",name=enum.metadata.name, uid=enum.metadata.uid)
-#                 a.__primarylabel__ = "SCC"
-#                 a.__primarykey__ = "uid"
-#                 r1 = Relationship(projectNode, "CONTAIN SA", subjectNode)
-#                 r2 = Relationship(subjectNode, "CAN USE SCC", a)
-#                 node = tx.merge(projectNode) 
-#                 node = tx.merge(subjectNode) 
-#                 node = tx.merge(a) 
-#                 node = tx.merge(r2) 
-#                 graph.commit(tx)
-
-
 ##
 ## Role
 ## 
