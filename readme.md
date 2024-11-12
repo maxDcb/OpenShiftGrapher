@@ -1,3 +1,7 @@
+# OpenShiftGrapher New Home
+
+This repo is not active anymore. Here the is the new home of the actively maintained project [OpenShiftGrapher](https://github.com/AmadeusITGroup/OpenShiftGrapher).
+
 # OpenShift Enumeration
 
 This repository contains 2 scripts, EnumAbsentObject.py is used to detect absent service accounts that could represent a vulnerability and OpenShiftGrapher.py that is used to enumerate more largely the cluster.  
